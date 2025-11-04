@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <input id="name" placeholder="Enter name">
+  <button onclick="joinQueue()">Join Queue</button>
+  <div id="game"></div>
+<script>
+let gameId, player;
+
+async function joinQueue() {
+  player = document.getElementById("name").value;
+  const res = await fetch("/queue", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ player })
+  });
+  const data = await res.json();
+  if (data.match) {
+    gameId = data.gameId;
+    loop();
+  } else {
+    document.getElementById("game").innerText = "Waiting for opponent...";
+    setTimeout(joinQueue, 3000);
+  }
+}
+
+async function blast() {
+  await fetch("/blast", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ gameId, player })
+  });
+  loop();
+}
+
+async function loop() {
+  const res = await fetch("/game/" + gameId);
+  const game = await res.json();
+  let text = `You: ${player}\n`;
+  text += `HP: ${game.hp?.[player]} vs ${game.hp?.[player===game.p1?game.p2:game.p1]}\n`;
+  if (game.winner) {
+    text += game.winner === player ? "You win!" : "You lose.";
+  } else if (game.turn === player) {
+    text += "Your turn.\n<button onclick='blast()'>Blast!</button>";
+  } else {
+    text += "Waiting for opponent...";
+    setTimeout(loop, 2000);
+  }
+  document.getElementById("game").innerHTML = text.replace(/\n/g,"<br>");
+}
+</script>
+</body>
+</html>
